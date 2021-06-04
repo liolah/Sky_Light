@@ -1,86 +1,239 @@
-// send temprature 
-// push notification when motion detected // and light is off
-// rgb wave and breathing effects
-// turn off light when no motion detected for 5 min
-
-// #define BLYNK_PRINT Serial
-#include <ESP8266WiFi.h>
+// pir sensor        
+// light sensor
+// temprature sensor
+// rgb wave 
+// static color
+// breathing color selection 
+// color change with temp
+// light off and on switch
+// send temp to app
+// push notification when motion
+//#include <SimpleTimer.h>
+//#define rpin D5
+//#define gpin D6
+//#define bpin D7
+//--------------------------------------------------------------------------------------------------------------------
 #include <BlynkSimpleEsp8266.h>
-#include <SimpleTimer.h>
 
-unsigned long previousMillis = 0;       
-const long interval = 1000;     //fade rate
-const float vref = 3.3;
-const float resolution = vref / 1023.0;
-float temperature;
-char auth[] = "YourAuthToken";
+#define tpin A0
+#define lpin D1
+#define ppin D2
+#define default_lighting_mode 1
+#define fadeValue 30   // determines the fading animation smoothness along with the timer used with light()
+
+int pin[3] = {D5,D6,D7};
+int rgbWave[6] = {0,-512,-1023,1,1,1};   // From [0] to [2] saves the previous value. From [3] to [5] saves the wave state (rising or falling)
+int rgbSelection[3];
+int Breathing[5] = {0,0,0,1,0};
+float temp[2];
+int *lightingMode = new int(default_lighting_mode);
+bool *ambientLight = new bool(true);
+bool *motion = new bool(false);
+bool *on = new bool(true);
+bool *pirArmed = new bool(true);
+
+char ssid[] = "AHMED";
+char pass[] = "01235000";
+char auth[] = "qmsU01AN1dBjzbzC5oi8y0DrFNwNaQ7j";   //Auth Token : qmsU01AN1dBjzbzC5oi8y0DrFNwNaQ7j
+
 SimpleTimer timer;
 
+float naturalNum(float x){
+  if(x >= 0)
+    return x;
+    return 0;  
+  }
 
-// This function tells Arduino what to do if there is a Widget
-// which is requesting data for Virtual Pin (5)
-BLYNK_READ(V3)
-{
-  // This command writes Arduino's uptime in seconds to Virtual Pin (5)
-  Blynk.virtualWrite(V3, val);
+float limit(float x){ 
+  if(x <= 1023)
+    return x;
+    return 0;  
+  }
+  
+void light(){
+  if(on){
+    if(*ambientLight){
+      switch(*lightingMode){
+         case 1:
+         staticLight();
+          break;
+         case 2:
+         wave();
+          break;
+         case 3:
+         tempLight();
+           break;
+         case 4:
+         breathing();
+            break;
+           }}
+    else if(!*ambientLight){
+      if(*motion){
+      switch(*lightingMode){
+         case 1:
+         staticLight();
+          break;
+         case 2:
+         wave();
+          break;
+         case 3:
+         tempLight();
+           break;
+         case 4:
+         breathing();
+            break;
+           }
+      }
+    }}
+  else if(!*on){
+    for(int i = 0;i<3;i++){
+    digitalWrite(pin[i],LOW);
+    }
+  }    
 }
-// This function will be called every time Slider Widget
-// in Blynk app writes values to the Virtual Pin V1
-BLYNK_WRITE(V1)
-{
-  int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
-  // You can also use:
-  // String i = param.asStr();
-  // double d = param.asDouble();
-  // process received value
+
+void breathing(){
+  if(Breathing[4] == 0){
+    for(int i= 0;i<3;i++){
+      Breathing[i] = rgbSelection[i];
+      Breathing[4] = 1;
+      }}
+  for(int i=0;i<3;i++){
+  if (Breathing[3]){
+   if (Breathing[i] < 1023){
+    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
+    Breathing[i] += fadeValue;
+  } if(Breathing[i] >= 1023) {
+    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
+    Breathing[3] = 0;
+  }} if(!Breathing[3]) {
+    if(Breathing[i] > 0){
+    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
+    Breathing[i] -= fadeValue;
+  } else if(Breathing[i] <= 0) {
+    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
+    rgbWave[3] = 1;
+  }}} 
+  }
+
+void wave(){
+  for(int i=0;i<3;i++){
+  if (rgbWave[3+i]){
+   if (rgbWave[i] < 1023){
+    analogWrite(pin[i], limit(naturalNum(rgbWave[i])));
+    rgbWave[i] += fadeValue;
+  } if(rgbWave[i] >= 1023) {
+    analogWrite(pin[i], limit(naturalNum(rgbWave[i])));
+    rgbWave[3+i] = 0;
+  }} if(!rgbWave[3+i]) {
+    if(rgbWave[i] > 0){
+    analogWrite(pin[i], limit(naturalNum(rgbWave[i])));
+    rgbWave[i] -= fadeValue;
+  } else if(rgbWave[i] <= 0) {
+    analogWrite(pin[i], limit(naturalNum(rgbWave[i])));
+    rgbWave[3+i] = 1;
+  }}}
+  }
+
+void motionNotification(){
+  if(*motion){
+  Blynk.notify("Motion detected in the vicinity!"); }
+  }
+
+void staticLight(){
+   analogWrite(pin[0],rgbSelection[0]);
+   analogWrite(pin[1],rgbSelection[1]);
+   analogWrite(pin[2],rgbSelection[2]); 
+  }
+
+void tempLight(){             
+  int r,g,b;
+  r = limit(((naturalNum(temp[1]-15))/10)*1023);
+  g = min(limit(((naturalNum(temp[1]-5))/10)*1023), limit(((naturalNum(45-temp[1]))/10)*1023));
+  b = limit(((naturalNum(35-temp[1]))/10)*1023);
+   analogWrite(pin[0],r);
+   analogWrite(pin[1],g);
+   analogWrite(pin[2],b); 
+  }
+
+BLYNK_CONNECTED() {
+    Blynk.syncAll();
 }
+
 BLYNK_WRITE(V1) {
   switch (param.asInt())
   {
-    case 1: // Item 1
-      Serial.println("Item 1 selected");
+    case 1: // Static light
+      *lightingMode = 1;
+      Serial.println("Static light selected");
       break;
-    case 2: // Item 2
-      Serial.println("Item 2 selected");
+    case 2: // RGB wave
+      *lightingMode = 2;
+      Serial.println("RGB wave selected");
       break;
-    case 3: // Item 3
-      Serial.println("Item 3 selected");
+    case 3: // Temprature dependent lighting mode
+      *lightingMode = 3;
+      Serial.println("Temprature dependent lighting mode selected");
+      break;
+    case 4: // Breathing
+      *lightingMode = 4;
+      Serial.println("Breathing selected");
       break;
     default:
-      Serial.println("Unknown item selected");
+      Serial.println("Unknown mode selected");
   }
-}
-void sendTemp(){
-  temperature = analogRead(A0); //lm35 is connected to pin A0 on NodeMcu
-  temperature = (temperature * resolution);
-  temperature = temperature * 100.0;
-  Blynk.virtualWrite(V0, temperature); //send the value to blynk application
-}
-    
-void setup{
-  WiFi.mode(WIFI_STA);
-    int cnt = 0;
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
-      if (cnt++ >= 10) {
-        WiFi.beginSmartConfig();
-        while (1) {
-          delay(1000);
-          if (WiFi.smartConfigDone()) {
-            break;
-          }
-        }
-      }
-    }
-  WiFi.printDiag(Serial);
-  Blynk.config(auth);
-  // Setup a function to be called every half second
-  timer.setInterval(500, sendTemp);
+    Breathing[4] = 0;
 }
 
-void loop()
-{
+BLYNK_WRITE(V2){
+    rgbSelection[0] = param[0].asInt();
+    rgbSelection[1] = param[1].asInt();
+    rgbSelection[2] = param[2].asInt();
+}
+
+BLYNK_WRITE(V3){   
+  *on = param.asInt();
+}
+
+BLYNK_WRITE(V4){   
+  *pirArmed = param.asInt();
+}
+
+void temprature(){
+  temp[0] = analogRead(tpin);
+  temp[1] = (temp[0]/1024.0)*330;
+  Blynk.virtualWrite(V0, temp[1]);
+  Serial.println(temp[1]);
+  }
+
+void lightsOut(){
+   *ambientLight = (!digitalRead(lpin) == 1);
+  }
+
+void motionCheck(){
+  if(*pirArmed){
+  *motion = (digitalRead(lpin) == 1); 
+  } else {
+    *motion = false;
+    }}
+    
+void setup(){
+  Serial.begin(9600);
+  pinMode(pin[0],OUTPUT);
+  pinMode(pin[1],OUTPUT);
+  pinMode(pin[2],OUTPUT);
+  pinMode(tpin,INPUT);
+  pinMode(lpin,INPUT);
+  pinMode(ppin,INPUT);
+  Blynk.begin(auth, ssid, pass);
+  timer.setInterval(30, light);
+  timer.setInterval(250, temprature);
+  timer.setInterval(2000, motionCheck);
+  timer.setInterval(1000, lightsOut);   
+  timer.setInterval(30000, motionNotification);
+}
+
+void loop(){
   Blynk.run();
   timer.run();
 }
