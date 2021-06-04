@@ -32,8 +32,8 @@ bool *motion = new bool(false);
 bool *on = new bool(true);
 bool *pirArmed = new bool(true);
 
-char ssid[] = "AHMED";
-char pass[] = "01235000";
+char ssid[] = "########";
+char pass[] = "#########";
 char auth[] = "qmsU01AN1dBjzbzC5oi8y0DrFNwNaQ7j";   //Auth Token : qmsU01AN1dBjzbzC5oi8y0DrFNwNaQ7j
 
 SimpleTimer timer;
