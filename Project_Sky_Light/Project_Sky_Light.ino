@@ -1,18 +1,3 @@
-// pir sensor        
-// light sensor
-// temprature sensor
-// rgb wave 
-// static color
-// breathing color selection 
-// color change with temp
-// light off and on switch
-// send temp to app
-// push notification when motion
-//#include <SimpleTimer.h>
-//#define rpin D5
-//#define gpin D6
-//#define bpin D7
-//--------------------------------------------------------------------------------------------------------------------
 #include <BlynkSimpleEsp8266.h>
 
 #define tpin A0
@@ -26,14 +11,15 @@ int rgbWave[6] = {0,-512,-1023,1,1,1};   // From [0] to [2] saves the previous v
 int rgbSelection[3];
 int Breathing[5] = {0,0,0,1,0};
 float temp[2];
-int *lightingMode = new int(default_lighting_mode);
-bool *ambientLight = new bool(true);
-bool *motion = new bool(false);
-bool *on = new bool(true);
-bool *pirArmed = new bool(true);
+//int rgb[3];
+int lightingMode = default_lighting_mode;
+bool ambientLight = true;
+bool motion = false;
+bool on = true;
+bool pirArmed = true;
 
-char ssid[] = "########";
-char pass[] = "#########";
+char ssid[] = "AHMED";
+char pass[] = "01235000";
 char auth[] = "qmsU01AN1dBjzbzC5oi8y0DrFNwNaQ7j";   //Auth Token : qmsU01AN1dBjzbzC5oi8y0DrFNwNaQ7j
 
 SimpleTimer timer;
@@ -52,8 +38,8 @@ float limit(float x){
   
 void light(){
   if(on){
-    if(*ambientLight){
-      switch(*lightingMode){
+    if(ambientLight){
+      switch(lightingMode){
          case 1:
          staticLight();
           break;
@@ -67,9 +53,9 @@ void light(){
          breathing();
             break;
            }}
-    else if(!*ambientLight){
-      if(*motion){
-      switch(*lightingMode){
+    else if(!ambientLight){
+      if(motion){
+      switch(lightingMode){
          case 1:
          staticLight();
           break;
@@ -85,7 +71,7 @@ void light(){
            }
       }
     }}
-  else if(!*on){
+  else if(!on){
     for(int i = 0;i<3;i++){
     digitalWrite(pin[i],LOW);
     }
@@ -136,7 +122,7 @@ void wave(){
   }
 
 void motionNotification(){
-  if(*motion){
+  if(motion){
   Blynk.notify("Motion detected in the vicinity!"); }
   }
 
@@ -144,6 +130,9 @@ void staticLight(){
    analogWrite(pin[0],rgbSelection[0]);
    analogWrite(pin[1],rgbSelection[1]);
    analogWrite(pin[2],rgbSelection[2]); 
+//    for(int i = 0;i<3;i++){
+//      analogWrite(pin[i],rgbSelection[i]); 
+//      }
   }
 
 void tempLight(){             
@@ -156,27 +145,35 @@ void tempLight(){
    analogWrite(pin[2],b); 
   }
 
+//void tempLight(){             
+//  rgb[0] = limit(((naturalNum(temp[1]-15))/10)*1023);
+//  rgb[1] = min(limit(((naturalNum(temp[1]-5))/10)*1023), limit(((naturalNum(45-temp[1]))/10)*1023));
+//  rgb[2] = limit(((naturalNum(35-temp[1]))/10)*1023);
+//  for(int i = 0;i<3;i++){
+//    analogWrite(pin[0],rgb[i]);
+//  }}
+
 BLYNK_CONNECTED() {
     Blynk.syncAll();
 }
 
-BLYNK_WRITE(V1) {
+BLYNK_WRITE(V4) {
   switch (param.asInt())
   {
     case 1: // Static light
-      *lightingMode = 1;
+      lightingMode = 1;
       Serial.println("Static light selected");
       break;
     case 2: // RGB wave
-      *lightingMode = 2;
+      lightingMode = 2;
       Serial.println("RGB wave selected");
       break;
     case 3: // Temprature dependent lighting mode
-      *lightingMode = 3;
+      lightingMode = 3;
       Serial.println("Temprature dependent lighting mode selected");
       break;
     case 4: // Breathing
-      *lightingMode = 4;
+      lightingMode = 4;
       Serial.println("Breathing selected");
       break;
     default:
@@ -185,18 +182,22 @@ BLYNK_WRITE(V1) {
     Breathing[4] = 0;
 }
 
-BLYNK_WRITE(V2){
+BLYNK_WRITE(V1){
     rgbSelection[0] = param[0].asInt();
     rgbSelection[1] = param[1].asInt();
     rgbSelection[2] = param[2].asInt();
+
+//    for(int i = 0;i<3;i++){
+//      rgbSelection[i] = param[i].asInt();
+//      }
+}
+
+BLYNK_WRITE(V2){   
+  on = param.asInt();
 }
 
 BLYNK_WRITE(V3){   
-  *on = param.asInt();
-}
-
-BLYNK_WRITE(V4){   
-  *pirArmed = param.asInt();
+  pirArmed = param.asInt();
 }
 
 void temprature(){
@@ -207,14 +208,14 @@ void temprature(){
   }
 
 void lightsOut(){
-   *ambientLight = (!digitalRead(lpin) == 1);
+   ambientLight = digitalRead(lpin);
   }
 
 void motionCheck(){
-  if(*pirArmed){
-  *motion = (digitalRead(lpin) == 1); 
+  if(pirArmed){
+  motion = digitalRead(lpin); 
   } else {
-    *motion = false;
+    motion = false;
     }}
     
 void setup(){
@@ -228,9 +229,9 @@ void setup(){
   Blynk.begin(auth, ssid, pass);
   timer.setInterval(30, light);
   timer.setInterval(250, temprature);
-  timer.setInterval(2000, motionCheck);
+  timer.setInterval(1000, motionCheck);
   timer.setInterval(1000, lightsOut);   
-  timer.setInterval(30000, motionNotification);
+  timer.setInterval(10000, motionNotification);
 }
 
 void loop(){
