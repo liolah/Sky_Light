@@ -35,48 +35,6 @@ float limit(float x){
     return x;
     return 0;  
   }
-  
-void light(){
-  if(on){
-    if(ambientLight){
-      switch(lightingMode){
-         case 1:
-         staticLight();
-          break;
-         case 2:
-         wave();
-          break;
-         case 3:
-         tempLight();
-           break;
-         case 4:
-         breathing();
-            break;
-           }}
-    else if(!ambientLight){
-      if(motion){
-      switch(lightingMode){
-         case 1:
-         staticLight();
-          break;
-         case 2:
-         wave();
-          break;
-         case 3:
-         tempLight();
-           break;
-         case 4:
-         breathing();
-            break;
-           }
-      }
-    }}
-  else if(!on){
-    for(int i = 0;i<3;i++){
-    digitalWrite(pin[i],LOW);
-    }
-  }    
-}
 
 void breathing(){
   if(Breathing[4] == 0){
@@ -122,9 +80,10 @@ void wave(){
   }
 
 void motionNotification(){
+ if(pirArmed){
   if(motion){
   Blynk.notify("Motion detected in the vicinity!"); }
-  }
+  }}
 
 void staticLight(){
    analogWrite(pin[0],rgbSelection[0]);
@@ -179,17 +138,18 @@ BLYNK_WRITE(V4) {
     default:
       Serial.println("Unknown mode selected");
   }
-    Breathing[4] = 0;
 }
 
 BLYNK_WRITE(V1){
     rgbSelection[0] = param[0].asInt();
     rgbSelection[1] = param[1].asInt();
     rgbSelection[2] = param[2].asInt();
+    Breathing[4] = 0;
 
 //    for(int i = 0;i<3;i++){
 //      rgbSelection[i] = param[i].asInt();
 //      }
+//      Breathing[4] = 0;
 }
 
 BLYNK_WRITE(V2){   
@@ -212,11 +172,57 @@ void lightsOut(){
   }
 
 void motionCheck(){
-  if(pirArmed){
-  motion = digitalRead(lpin); 
-  } else {
-    motion = false;
-    }}
+  motion = (digitalRead(ppin)==1); 
+    }
+
+void motionStill(){
+  motion = digitalRead(ppin)==1; 
+    }
+
+void light(){
+  if(on){
+    if(ambientLight){
+      switch(lightingMode){
+         case 1:
+         staticLight();
+          break;
+         case 2:
+         wave();
+          break;
+         case 3:
+         tempLight();
+           break;
+         case 4:
+         breathing();
+            break;
+           }}
+    else if(!ambientLight){
+      if(motion){
+      switch(lightingMode){
+         case 1:
+         staticLight();
+          break;
+         case 2:
+         wave();
+          break;
+         case 3:
+         tempLight();
+           break;
+         case 4:
+         breathing();
+            break;
+           }
+      } else {
+        for(int i = 0;i<3;i++){
+    digitalWrite(pin[i],LOW);
+    }      
+    }}}
+  else if(!on){
+    for(int i = 0;i<3;i++){
+    digitalWrite(pin[i],LOW);
+    }
+  }    
+}
     
 void setup(){
   Serial.begin(9600);
@@ -229,7 +235,8 @@ void setup(){
   Blynk.begin(auth, ssid, pass);
   timer.setInterval(30, light);
   timer.setInterval(250, temprature);
-  timer.setInterval(1000, motionCheck);
+  timer.setInterval(500, motionCheck);
+  timer.setInterval(5000, motionStill);
   timer.setInterval(1000, lightsOut);   
   timer.setInterval(10000, motionNotification);
 }
