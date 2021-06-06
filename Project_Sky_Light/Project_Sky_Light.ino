@@ -9,7 +9,7 @@
 int pin[3] = {D5,D6,D7};
 int rgbWave[6] = {0,-512,-1023,1,1,1};   // From [0] to [2] saves the previous value. From [3] to [5] saves the wave state (rising or falling)
 int rgbSelection[3];
-int Breathing[5] = {0,0,0,0,0};
+int Breathing[8] = {0,0,0,1,0,0,0,0};
 float temp[2];
 //int rgb[3];
 int lightingMode = default_lighting_mode;
@@ -37,29 +37,32 @@ float limit(float x){    //returns 1023 if the number is greater than 1023
     return 1023;  
   }
 
-void breathing(){   //breathing effect function
-  if(Breathing[4] == 0){
-    for(int i= 0;i<3;i++){
-      Breathing[i] = rgbSelection[i];
-      Breathing[4] = 1;
-      }}
-  for(int i=0;i<3;i++){
-  if (Breathing[3]){
-   if (Breathing[i] < 1023){
-    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
-    Breathing[i] += fadeValue;
-  } if(Breathing[i] >= 1023) {
-    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
-    Breathing[3] = 0;
-  }} if(!Breathing[3]) {
-    if(Breathing[i] > 0){
-    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
-    Breathing[i] -= fadeValue;
-  } else if(Breathing[i] <= 0) {
-    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
-    rgbWave[3] = 1;
-  }}} 
-  }
+void breathing(){   }//breathing effect function
+//  if(Breathing[4] == 0){
+//    for(int i= 0;i<3;i++){
+//      Breathing[i] = rgbSelection[i];
+//      Breathing[4] = 1;   
+//      }
+//      for(int i= 0;i<3;i++){
+//      Breathing[i+5] = (rgbSelection[i]/20);   
+//      }}
+//  for(int i=0;i<3;i++){
+//  if (Breathing[3]){
+//   if (Breathing[i] < 1023){
+//    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
+//    Breathing[i] += Breathing[i+5];
+//  } if(Breathing[i] >= 1023) {
+//    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
+//    Breathing[3] = 0;
+//  }} if(!Breathing[3]) {
+//    if(Breathing[i] > 0){
+//    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
+//    Breathing[i] -= Breathing[i+5];
+//  } else if(Breathing[i] <= 0) {
+//    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
+//    Breathing[3] = 1;
+//  }}} 
+//  }
 
 void wave(){    //RGB wave function
   for(int i=0;i<3;i++){
@@ -98,11 +101,8 @@ void staticLight(){   //static light mode function
 void tempLight(){             //temprature dependent light mode function
   int r,g,b;
   r = limit(((naturalNum(temp[1]-15))/10)*1023);
-  Serial.println(r);
   g = min(limit(((naturalNum(temp[1]-5))/10)*1023), limit(((naturalNum(45-temp[1]))/10)*1023));
-  Serial.println(g);
   b = limit(((naturalNum(35-temp[1]))/10)*1023);
-  Serial.println(b);
    analogWrite(pin[0],r);
    analogWrite(pin[1],g);
    analogWrite(pin[2],b); 
@@ -176,12 +176,15 @@ void lightsOut(){
   }
 
 void motionCheck(){
-  motion = digitalRead(ppin); 
-  
+  if(digitalRead(ppin)){
+     motion = 1; }
+  else {
+     pmotion = 0;
+    }
     }
 
 void motionStill(){
-  motion = digitalRead(ppin)==1; 
+  motion = digitalRead(ppin); 
     }
 
 void light(){
@@ -204,18 +207,18 @@ void light(){
     else if(!ambientLight){
       if(motion){
       switch(lightingMode){
-         case 1:
+        case 1:
          staticLight();
           break;
-         case 2:
+        case 2:
          wave();
           break;
-         case 3:
+        case 3:
          tempLight();
-           break;
-         case 4:
+          break;
+        case 4:
          breathing();
-            break;
+          break;
            }
       } else {
         for(int i = 0;i<3;i++){
@@ -226,9 +229,17 @@ void light(){
     for(int i = 0;i<3;i++){
     digitalWrite(pin[i],LOW);
     }
+    motion = 0;
   }    
 }
-    
+
+void motionChange(){
+  if(pmotion == 0 && motion == 1){
+    motionNotification(); 
+    pmotion = 1;
+  }
+  }
+  
 void setup(){
   Serial.begin(9600);
   pinMode(pin[0],OUTPUT);
@@ -241,9 +252,9 @@ void setup(){
   timer.setInterval(30, light);
   timer.setInterval(250, temprature);
   timer.setInterval(500, motionCheck);
-  timer.setInterval(5000, motionStill);
-  timer.setInterval(1000, lightsOut);   
-  timer.setInterval(10000, motionNotification);
+  timer.setInterval(60000, motionStill);
+  timer.setInterval(500, lightsOut);   
+  timer.setInterval(30000, motionChange);
 }
 
 void loop(){
