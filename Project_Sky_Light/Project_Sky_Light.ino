@@ -5,11 +5,12 @@
 #define ppin D2   //pir sensor pin
 #define default_lighting_mode 1
 #define fadeValue 10   // determines the fading animation smoothness along with the timer used with light()
+#define breathing_fade 30
 
 int pin[3] = {D5,D6,D7};
 int rgbWave[6] = {0,-512,-1023,1,1,1};   // From [0] to [2] saves the previous value. From [3] to [5] saves the wave state (rising or falling)
 int rgbSelection[3];
-int Breathing[8] = {0,0,0,1,0,0,0,0};
+int Breathing[2] = {0,1};
 float temp[2];
 //int rgb[3];
 int lightingMode = default_lighting_mode;
@@ -37,32 +38,31 @@ float limit(float x){    //returns 1023 if the number is greater than 1023
     return 1023;  
   }
 
-void breathing(){   }//breathing effect function
-//  if(Breathing[4] == 0){
-//    for(int i= 0;i<3;i++){
-//      Breathing[i] = rgbSelection[i];
-//      Breathing[4] = 1;   
-//      }
-//      for(int i= 0;i<3;i++){
-//      Breathing[i+5] = (rgbSelection[i]/20);   
-//      }}
-//  for(int i=0;i<3;i++){
-//  if (Breathing[3]){
-//   if (Breathing[i] < 1023){
-//    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
-//    Breathing[i] += Breathing[i+5];
-//  } if(Breathing[i] >= 1023) {
-//    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
-//    Breathing[3] = 0;
-//  }} if(!Breathing[3]) {
-//    if(Breathing[i] > 0){
-//    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
-//    Breathing[i] -= Breathing[i+5];
-//  } else if(Breathing[i] <= 0) {
-//    analogWrite(pin[i], limit(naturalNum(Breathing[i])));
-//    Breathing[3] = 1;
-//  }}} 
-//  }
+void breathing(){   //breathing effect function
+  if (Breathing[1]){
+   if (Breathing[0] < 1023){
+        for(int i = 0;i<3;i++){
+         analogWrite(pin[i],(rgbSelection[i] * Breathing[0])/1023); 
+         }
+    Breathing[0] += breathing_fade;
+  } if(Breathing[0] >= 1023) {
+    for(int i = 0;i<3;i++){
+         analogWrite(pin[i],(rgbSelection[i] * Breathing[0])/1023); 
+         }
+    Breathing[1] = 0;
+  }} if(!Breathing[1]) {
+    if(Breathing[0] > 0){
+    for(int i = 0;i<3;i++){
+         analogWrite(pin[i],(rgbSelection[i] * Breathing[0])/1023); 
+         }
+    Breathing[0] -= breathing_fade;
+  } else if(Breathing[0] <= 0) {
+    for(int i = 0;i<3;i++){
+         analogWrite(pin[i],(rgbSelection[i] * Breathing[0])/1023); 
+         }
+    Breathing[1] = 1;
+  }}}
+
 
 void wave(){    //RGB wave function
   for(int i=0;i<3;i++){
@@ -229,7 +229,6 @@ void light(){
     for(int i = 0;i<3;i++){
     digitalWrite(pin[i],LOW);
     }
-    motion = 0;
   }    
 }
 
