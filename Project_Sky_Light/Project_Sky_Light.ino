@@ -5,7 +5,7 @@
 #define ppin D2   //pir sensor pin
 #define default_lighting_mode 1
 #define fadeValue 10   // determines the fading animation smoothness along with the timer used with light()
-#define breathing_fade 30
+#define breathing_fade 20
 
 int pin[3] = {D5,D6,D7};
 int rgbWave[6] = {0,-512,-1023,1,1,1};   // From [0] to [2] saves the previous value. From [3] to [5] saves the wave state (rising or falling)
@@ -16,7 +16,6 @@ float temp[2];
 int lightingMode = default_lighting_mode;
 bool ambientLight = true;
 bool motion = false;
-bool pmotion = false;
 bool on = true;
 bool pirArmed = true;
 
@@ -148,12 +147,10 @@ BLYNK_WRITE(V1){ // Zebra rgb
     rgbSelection[0] = param[0].asInt();
     rgbSelection[1] = param[1].asInt();
     rgbSelection[2] = param[2].asInt();
-    Breathing[4] = 0;
 
 //    for(int i = 0;i<3;i++){
 //      rgbSelection[i] = param[i].asInt();
 //      }
-//      Breathing[4] = 0;
 }
 
 BLYNK_WRITE(V2){   //On switch
@@ -169,6 +166,13 @@ void temprature(){
   temp[1] = (temp[0]/1024.0)*330;
   Blynk.virtualWrite(V0, temp[1]);
   Serial.println(temp[1]);
+  if (temp[1] > 35){
+    Blynk.notify("It's very hot. You should turn on the AC!");
+    } else if (temp[1] > 50){
+    Blynk.notify("It's realy realy hot around. Something might be on fire!");  
+      } else if (temp[1] < 15){
+    Blynk.notify("It's very cold here. You should be wearing something heavy and !");  
+      }  
   }
 
 void lightsOut(){
@@ -178,9 +182,6 @@ void lightsOut(){
 void motionCheck(){
   if(digitalRead(ppin)){
      motion = 1; }
-  else {
-     pmotion = 0;
-    }
     }
 
 void motionStill(){
@@ -233,9 +234,8 @@ void light(){
 }
 
 void motionChange(){
-  if(pmotion == 0 && motion == 1){
+  if(digitalRead(ppin) && motion == 0){
     motionNotification(); 
-    pmotion = 1;
   }
   }
   
@@ -251,9 +251,9 @@ void setup(){
   timer.setInterval(30, light);
   timer.setInterval(250, temprature);
   timer.setInterval(500, motionCheck);
-  timer.setInterval(60000, motionStill);
+  timer.setInterval(30000, motionStill);
   timer.setInterval(500, lightsOut);   
-  timer.setInterval(30000, motionChange);
+  timer.setInterval(200, motionChange);
 }
 
 void loop(){
