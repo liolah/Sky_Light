@@ -8,18 +8,20 @@
 #define default_lighting_mode 1
 #define fadeValue 10   // determines the fading animation smoothness along with the timer used with light()
 #define breathing_fade 20
+#define waveMaxVal 1514
+#define waveMinVal -512
 
 int pin[3] = {D5,D6,D7};
-int RGBwaveCoordinates[6] = {0,-512,-1023,1,1,1};   // From [0] to [2] saves the previous value. From [3] to [5] saves the wave state (rising or falling)
+int RGBwaveCoordinates[6] = {0,-1514,-3028,1,1,1};   // From [0] to [2] saves the previous value. From [3] to [5] saves the wave state (rising or falling)
 int rgbSelection[3];
 int Breathing[2] = {0,1};
 float temp[2];
 int lightingMode = default_lighting_mode;
 bool on = true;
 
-char ssid[] = "AHMED";                               //network SSID Token
-char pass[] = "01235000";                           //network password Token
-char auth[] = "qmsU01AN1dBjzbzC5oi8y0DrFNwNaQ7j";   //Auth Token 
+char ssid[] = "######";                                //network SSID  
+char pass[] = "######";                               //network password  
+char auth[] = "######";                              //Auth Token 
 
 SimpleTimer timer;
 
@@ -64,17 +66,17 @@ void breathing(){   //breathing effect function
 void wave(){    //RGB wave function
   for(int i=0;i<3;i++){
   if (RGBwaveCoordinates[3+i]){
-   if (RGBwaveCoordinates[i] < 1023){
+   if (RGBwaveCoordinates[i] < waveMaxVal){
     analogWrite(pin[i], limit(RGBwaveCoordinates[i]));
     RGBwaveCoordinates[i] += fadeValue;
-  } if(RGBwaveCoordinates[i] >= 1023) {
+  } if(RGBwaveCoordinates[i] >= waveMaxVal) {
     analogWrite(pin[i], limit(RGBwaveCoordinates[i]));
     RGBwaveCoordinates[3+i] = 0;
   }} if(!RGBwaveCoordinates[3+i]) {
-    if(RGBwaveCoordinates[i] > 0){
+    if(RGBwaveCoordinates[i] > waveMinVal){
     analogWrite(pin[i], limit(RGBwaveCoordinates[i]));
     RGBwaveCoordinates[i] -= fadeValue;
-  } else if(RGBwaveCoordinates[i] <= 0) {
+  } else if(RGBwaveCoordinates[i] <= waveMinVal) {
     analogWrite(pin[i], limit(RGBwaveCoordinates[i]));
     RGBwaveCoordinates[3+i] = 1;
   }}}
@@ -87,9 +89,9 @@ void staticLight(){   //static light mode function
 }
 
 void tempLight(){             //temprature dependent light mode function
-   analogWrite(pin[0], limit(((temp[1]-15)/10)*1023));
-   analogWrite(pin[1], min(limit(((temp[1]-5)/10)*1023), limit(((45-temp[1])/10)*1023)));
-   analogWrite(pin[2], limit(((35-temp[1])/10)*1023)); 
+   analogWrite(pin[0], limit(((temp[1]-20)/5)*1023));
+   analogWrite(pin[1], min(limit(((temp[1]-15)/5)*1023), limit(((35-temp[1])/5)*1023)));
+   analogWrite(pin[2], limit(((30-temp[1])/5)*1023)); 
   }
 
 BLYNK_CONNECTED() {   //syncs the nodeMCU with the app on startup
