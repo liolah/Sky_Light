@@ -19,9 +19,9 @@ bool motion = false;
 bool on = true;
 bool pirArmed = true;
 
-char ssid[] = "AHMED";
-char pass[] = "01235000";
-char auth[] = "qmsU01AN1dBjzbzC5oi8y0DrFNwNaQ7j";   //Auth Token : qmsU01AN1dBjzbzC5oi8y0DrFNwNaQ7j
+char ssid[] = "########";
+char pass[] = "#########";
+char auth[] = "##########";   //Auth Token 
 
 SimpleTimer timer;
 
