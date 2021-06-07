@@ -165,14 +165,7 @@ void temprature(){
   temp[0] = analogRead(tpin);
   temp[1] = (temp[0]/1024.0)*330;
   Blynk.virtualWrite(V0, temp[1]);
-  Serial.println(temp[1]);
-  if (temp[1] > 35){
-    Blynk.notify("It's very hot. You should turn on the AC!");
-    } else if (temp[1] > 50){
-    Blynk.notify("It's realy realy hot around. Something might be on fire!");  
-      } else if (temp[1] < 15){
-    Blynk.notify("It's very cold here. You should be wearing something heavy and !");  
-      }  
+  Serial.println(temp[1]); 
   }
 
 void lightsOut(){
