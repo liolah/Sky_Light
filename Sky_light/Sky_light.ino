@@ -1,4 +1,4 @@
-//---------------------------------------------------------This code was made by --------------------------------------------
+ //---------------------------------------------------------This code was made by --------------------------------------------
 //--------------------------------------------------------------Hesham Hany--------------------------------------------------
 
 #include <BlynkSimpleEsp8266.h>
@@ -29,8 +29,6 @@ int colors[9][3] = {{1023,1023,1023} //  White
                   ,{1023,40,0} //  Orange
                   ,{1023,0,50} };//  Pink 
                   
-char ssid[] = "AHMED";                               //network SSID Token
-char pass[] = "01235000";                           //network password Token
 char auth[] = "KoVNbPQ5qrZS0uxW1sDrGFX2K6ssVlwI";   //Auth Token 
 
 BlynkTimer timer;
@@ -101,6 +99,26 @@ void randomBreathing(){   //breathing effect with random colors
     Breathing[1] = 1;
   }}}
 
+void colorSwitch(){   //Switches colors randomly
+  if (Breathing[1]){
+   if (Breathing[0] < 1023){
+    Breathing[0] += breathing_fade;
+  } if(Breathing[0] >= 1023) {
+    Breathing[1] = 0;
+  }} if(!Breathing[1]) {
+    if(Breathing[0] > 0){
+    Breathing[0] -= breathing_fade;
+  } else if(Breathing[0] <= 0) {
+     for(int i = 0;i<3;i++){
+     int j = random(0,8);
+     randomRGB[i] = colors[j][i];
+     }
+     for(int i = 0;i<3;i++){
+         digitalWrite(pin[i],randomRGB[i]); 
+         }
+    Breathing[1] = 1;
+  }}}
+
 void wave(){    //RGB wave function
   for(int i=0;i<3;i++){
   if (RGBwaveCoordinates[3+i]){
@@ -135,10 +153,6 @@ void tempLight(){             //temprature dependent light mode function
 BLYNK_CONNECTED() {   //syncs the nodeMCU with the app on startup
     Blynk.syncAll();
 }
-
-BLYNK_WRITE(V3) {  //light modes list 
-  lightingMode = param.asInt();
-}
   
 BLYNK_WRITE(V1){ // Zebra rgb 
     for(int i = 0;i<3;i++){
@@ -148,6 +162,19 @@ BLYNK_WRITE(V1){ // Zebra rgb
 
 BLYNK_WRITE(V2){   //On switch
   on = param.asInt();
+}
+
+BLYNK_WRITE(V3) {  //light modes list 
+  lightingMode = param.asInt();
+}
+
+BLYNK_WRITE(V4) {  //reset wifi credentials 
+  int reset = param.asInt();
+  if(reset == 7){
+    WiFiManager reset;
+    reset.resetSettings();
+    ESP.restart(); 
+    }
 }
 
 void temprature(){
@@ -173,6 +200,9 @@ void light(){
          case 5:
          randomBreathing();
             break;
+         case 6:
+         colorSwitch();
+            break;
            }} else if(!on){
     for(int i = 0;i<3;i++){
     digitalWrite(pin[i],LOW);
@@ -189,7 +219,6 @@ void setup(){
   wifiManager.autoConnect("Sky light");
   WiFi.mode(WIFI_STA);
   Blynk.config(auth);
-  Blynk.connect();
   timer.setInterval(30, light);
   timer.setInterval(250, temprature);
 }
