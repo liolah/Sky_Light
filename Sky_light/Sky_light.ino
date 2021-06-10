@@ -1,29 +1,39 @@
 //---------------------------------------------------------This code was made by --------------------------------------------
 //--------------------------------------------------------------Hesham Hany--------------------------------------------------
-//-------------------------------------------------Special thanks to Nebuz, LEVW, and pierre---------------------------------
 
 #include <BlynkSimpleEsp8266.h>
+#include <WiFiManager.h> 
 
 #define temperatureSensorPin A0   //temprature sensor pin
 #define default_lighting_mode 1
-#define fadeValue 10   // determines the fading animation smoothness along with the timer used with light()
+#define fadeValue 20   // determines the fading animation smoothness along with the timer used with light()
 #define breathing_fade 20
-#define waveMaxVal 1514
-#define waveMinVal -512
+#define waveMaxVal 2026
+#define waveMinVal -1023
 
 int pin[3] = {D5,D6,D7};
-int RGBwaveCoordinates[6] = {0,-1514,-3028,1,1,1};   // From [0] to [2] saves the previous value. From [3] to [5] saves the wave state (rising or falling)
+int RGBwaveCoordinates[6] = {2026,0,0,0,0,1};   // From [0] to [2] saves the previous value. From [3] to [5] saves the wave state (rising or falling)
 int rgbSelection[3];
-int Breathing[2] = {0,1};
-float temp[2];
+int randomRGB[3];
+int Breathing[2] = {0,0};
+float temp;
 int lightingMode = default_lighting_mode;
 bool on = true;
+int colors[9][3] = {{1023,1023,1023} //  White
+                  ,{1023,0,0} //  Red
+                  ,{0,1023,0} //  Green
+                  ,{0,0,1023} //  Blue
+                  ,{1023,0,1023} //  Purple
+                  ,{1023,1023,0} //  Yellow
+                  ,{0,1023,1023} //  Cyan
+                  ,{1023,40,0} //  Orange
+                  ,{1023,0,50} };//  Pink 
+                  
+char ssid[] = "AHMED";                               //network SSID Token
+char pass[] = "01235000";                           //network password Token
+char auth[] = "KoVNbPQ5qrZS0uxW1sDrGFX2K6ssVlwI";   //Auth Token 
 
-char ssid[] = "######";                                //network SSID  
-char pass[] = "######";                               //network password  
-char auth[] = "######";                              //Auth Token 
-
-SimpleTimer timer;
+BlynkTimer timer;
 
 float limit(float x){    //returns 1023 if the number is greater than 1023, returns 0 if the number is negative
   if(x <= 1023){
@@ -62,6 +72,34 @@ void breathing(){   //breathing effect function
     Breathing[1] = 1;
   }}}
 
+void randomBreathing(){   //breathing effect with random colors
+  if (Breathing[1]){
+   if (Breathing[0] < 1023){
+        for(int i = 0;i<3;i++){
+         analogWrite(pin[i],(randomRGB[i] * Breathing[0])/1023); 
+         }
+    Breathing[0] += breathing_fade;
+  } if(Breathing[0] >= 1023) {
+    for(int i = 0;i<3;i++){
+         analogWrite(pin[i],(randomRGB[i] * Breathing[0])/1023); 
+         }
+    Breathing[1] = 0;
+  }} if(!Breathing[1]) {
+    if(Breathing[0] > 0){
+    for(int i = 0;i<3;i++){
+         analogWrite(pin[i],(randomRGB[i] * Breathing[0])/1023); 
+         }
+    Breathing[0] -= breathing_fade;
+  } else if(Breathing[0] <= 0) {
+    for(int i = 0;i<3;i++){
+         analogWrite(pin[i],(randomRGB[i] * Breathing[0])/1023); 
+         }
+     for(int i = 0;i<3;i++){
+     int j = random(0,8);
+     randomRGB[i] = colors[j][i];
+     }
+    Breathing[1] = 1;
+  }}}
 
 void wave(){    //RGB wave function
   for(int i=0;i<3;i++){
@@ -89,9 +127,9 @@ void staticLight(){   //static light mode function
 }
 
 void tempLight(){             //temprature dependent light mode function
-   analogWrite(pin[0], limit(((temp[1]-20)/5)*1023));
-   analogWrite(pin[1], min(limit(((temp[1]-15)/5)*1023), limit(((35-temp[1])/5)*1023)));
-   analogWrite(pin[2], limit(((30-temp[1])/5)*1023)); 
+   analogWrite(pin[0], limit(((temp-20)/5)*1023));
+   analogWrite(pin[1], min(limit(((temp-15)/5)*1023), limit(((35-temp)/5)*1023)));
+   analogWrite(pin[2], limit(((30-temp)/5)*1023)); 
   }
 
 BLYNK_CONNECTED() {   //syncs the nodeMCU with the app on startup
@@ -113,9 +151,8 @@ BLYNK_WRITE(V2){   //On switch
 }
 
 void temprature(){
-  temp[0] = analogRead(temperatureSensorPin);
-  temp[1] = (temp[0]/1024.0)*330;
-  Blynk.virtualWrite(V0, temp[1]); 
+  temp = (analogRead(temperatureSensorPin)/1024.0)*330;
+  Blynk.virtualWrite(V0, temp); 
   }
 
 void light(){
@@ -133,6 +170,9 @@ void light(){
          case 4:
          breathing();
             break;
+         case 5:
+         randomBreathing();
+            break;
            }} else if(!on){
     for(int i = 0;i<3;i++){
     digitalWrite(pin[i],LOW);
@@ -145,7 +185,11 @@ void setup(){
   pinMode(pin[1],OUTPUT);
   pinMode(pin[2],OUTPUT);
   pinMode(temperatureSensorPin,INPUT);
-  Blynk.begin(auth, ssid, pass);
+  WiFiManager wifiManager;
+  wifiManager.autoConnect("Sky light");
+  WiFi.mode(WIFI_STA);
+  Blynk.config(auth);
+  Blynk.connect();
   timer.setInterval(30, light);
   timer.setInterval(250, temprature);
 }
